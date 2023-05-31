@@ -53,7 +53,13 @@ class MalMap extends MalValue {
   }
 }
 
-class MalNil extends MalValue {
+class MalPrimitive extends MalValue {
+  constructor(value) {
+    super(value);
+  }
+}
+
+class MalNil extends MalPrimitive {
   constructor(value) {
     super(null);
   }
@@ -63,7 +69,7 @@ class MalNil extends MalValue {
   }
 }
 
-class MalBool extends MalValue {
+class MalBool extends MalPrimitive {
   constructor(value) {
     super(value);
   }
@@ -73,4 +79,4 @@ class MalBool extends MalValue {
   }
 }
 
-module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap };
+module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive };
