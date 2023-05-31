@@ -36,7 +36,7 @@ const generalLesserEquals = (firstValue, secondValue) =>
   firstValue.value <= secondValue.value;
 
 const generalGreaterThan = (firstValue, secondValue) =>
-  firstValue.value < secondValue.value;
+  firstValue.value > secondValue.value;
 
 const generalLesserThan = (firstValue, secondValue) =>
   firstValue.value < secondValue.value;
@@ -135,6 +135,46 @@ const handle_if = (ast, env) => {
   return result.value ? EVAL(ifPart, env) : elsePartValue;
 };
 
+const isCapturingPresent = list => {
+  return list.some(element => element.value === '&');
+};
+
+const getIndexOfCapture = list => {
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].value === '&') return i;
+  }
+};
+
+const handle_fn = (ast, env) => {
+  const [_, bindings, fnbody] = ast.value;
+
+  return (...args) => {
+    const newEnv = new Env(env);
+    if (isCapturingPresent(bindings.value)) {
+      const capturingIndex = getIndexOfCapture(bindings.value);
+      const bindingElements = bindings.value.slice(0, capturingIndex);
+      const restElements = bindings.value.slice(capturingIndex);
+
+      console.log('all', args);
+
+      bindingElements.forEach(
+        (symbol, index) => newEnv.set(symbol, EVAL(args[index], newEnv)));
+
+      newEnv.set(restElements[1],
+        new MalList(EVAL(args.slice(capturingIndex), newEnv)));
+      console.log('line-165', newEnv.data.more, fnbody);
+
+      return EVAL(fnbody, newEnv);
+    }
+
+    if (bindings.value.length !== args.length)
+      throw `Wrong number of args (${args.length}) passed to Function`;
+
+    bindings.value.forEach((symbol, index) => newEnv.set(symbol, EVAL(args[index], newEnv)));
+    return EVAL(fnbody, newEnv);
+  }
+};
+
 const READ = str => read_str(str);
 const EVAL = (ast, env) => {
   if (!(ast instanceof MalList)) return eval_ast(ast, env);
@@ -150,6 +190,8 @@ const EVAL = (ast, env) => {
       return handle_do(ast, env);
     case 'if':
       return handle_if(ast, env);
+    case 'fn*':
+      return handle_fn(ast, env);
   }
   const [fn, ...args] = eval_ast(ast, env).value;
 
@@ -165,8 +207,19 @@ env.set(new MalSymbol('/'), (...args) => operate('div', ...args));
 env.set(new MalSymbol('='), (...args) => operate('equals', ...args));
 env.set(new MalSymbol('>='), (...args) => operate('greaterEquals', ...args));
 env.set(new MalSymbol('<='), (...args) => operate('lesserEquals', ...args));
-env.set(new MalSymbol('>'), (...args) => operate('lesserThan', ...args));
-env.set(new MalSymbol('<'), (...args) => operate('greaterThan', ...args));
+env.set(new MalSymbol('>'), (...args) => operate('greaterThan', ...args));
+env.set(new MalSymbol('<'), (...args) => operate('lesserThan', ...args));
+env.set(new MalSymbol('list'), (...args) => new MalList(args));
+env.set(new MalSymbol('list?'), (args) => new MalBool(args instanceof MalList));
+env.set(new MalSymbol('empty?'), (args) => new MalBool(args.value.length === 0));
+env.set(new MalSymbol('count'), (...args) => {
+  console.log('args', args);
+  return new MalPrimitive(args.value.length);
+});
+env.set(new MalSymbol('prn'), (...args) => {
+  args.forEach(arg => console.log(arg.value));
+  return new MalNil();
+});
 
 const rep = str => PRINT(EVAL(READ(str), env));
 
