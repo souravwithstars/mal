@@ -155,14 +155,10 @@ const handle_fn = (ast, env) => {
       const bindingElements = bindings.value.slice(0, capturingIndex);
       const restElements = bindings.value.slice(capturingIndex);
 
-      console.log('all', args);
-
       bindingElements.forEach(
         (symbol, index) => newEnv.set(symbol, EVAL(args[index], newEnv)));
-
       newEnv.set(restElements[1],
         new MalList(EVAL(args.slice(capturingIndex), newEnv)));
-      console.log('line-165', newEnv.data.more, fnbody);
 
       return EVAL(fnbody, newEnv);
     }
@@ -212,10 +208,8 @@ env.set(new MalSymbol('<'), (...args) => operate('lesserThan', ...args));
 env.set(new MalSymbol('list'), (...args) => new MalList(args));
 env.set(new MalSymbol('list?'), (args) => new MalBool(args instanceof MalList));
 env.set(new MalSymbol('empty?'), (args) => new MalBool(args.value.length === 0));
-env.set(new MalSymbol('count'), (...args) => {
-  console.log('args', args);
-  return new MalPrimitive(args.value.length);
-});
+env.set(new MalSymbol('count'), (args) => new MalPrimitive(args.value.length));
+
 env.set(new MalSymbol('prn'), (...args) => {
   args.forEach(arg => console.log(arg.value));
   return new MalNil();
