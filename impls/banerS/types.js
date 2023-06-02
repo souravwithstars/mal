@@ -79,4 +79,14 @@ class MalBool extends MalPrimitive {
   }
 }
 
-module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive };
+class MalString extends MalValue {
+  constructor(value) {
+    super(value);
+  }
+
+  pr_str() {
+    return this.value();
+  }
+}
+
+module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive, MalString };

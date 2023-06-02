@@ -1,8 +1,8 @@
 const readline = require('readline');
 const { read_str } = require('./reader.js');
-const { MalSymbol, MalList, MalValue, MalVector, MalMap, MalBool, MalPrimitive, MalNil } = require('./types.js');
+const { MalSymbol, MalList, MalString, MalVector, MalMap, MalBool, MalPrimitive, MalNil } = require('./types.js');
 const { Env } = require('./env.js');
-// const { pr_str } = require('./printer.js');
+const { pr_str } = require('./printer.js');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -99,6 +99,11 @@ const eval_ast = (ast, env) => {
     return new MalMap(newAst);
   }
 
+  if(ast instanceof MalString) {
+    const newAst = EVAL(ast.value, env);
+    return new MalString(newAst);
+  }
+
   return ast;
 };
 
@@ -129,9 +134,12 @@ const handle_if = (ast, env) => {
 
   if (evaluatedValue instanceof MalNil || evaluatedValue instanceof MalBool) {
     result = new MalBool(evaluatedValue.value);
-  } else if (evaluatedValue instanceof MalPrimitive) {
+  } else {
     result = new MalBool(true);
   }
+
+  console.log('handle if', result, EVAL(ifPart, env), elsePartValue);
+
   return result.value ? EVAL(ifPart, env) : elsePartValue;
 };
 
@@ -148,7 +156,7 @@ const getIndexOfCapture = list => {
 const handle_fn = (ast, env) => {
   const [_, bindings, fnbody] = ast.value;
 
-  return (...args) => {
+  const clojure = (...args) => {
     const newEnv = new Env(env);
     if (isCapturingPresent(bindings.value)) {
       const capturingIndex = getIndexOfCapture(bindings.value);
@@ -166,9 +174,13 @@ const handle_fn = (ast, env) => {
     if (bindings.value.length !== args.length)
       throw `Wrong number of args (${args.length}) passed to Function`;
 
-    bindings.value.forEach((symbol, index) => newEnv.set(symbol, EVAL(args[index], newEnv)));
+    bindings.value.forEach((symbol, index) => newEnv.set(symbol, args[index]));
     return EVAL(fnbody, newEnv);
-  }
+  };
+
+  clojure.toString = () => '#<function>';
+
+  return clojure;
 };
 
 const READ = str => read_str(str);
@@ -193,14 +205,17 @@ const EVAL = (ast, env) => {
 
   return fn.apply(null, args);
 };
-const PRINT = malValue => malValue.pr_str();
+const PRINT = malValue => pr_str(malValue);
 
 const env = new Env();
 env.set(new MalSymbol('+'), (...args) => operate('add', ...args));
 env.set(new MalSymbol('-'), (...args) => operate('sub', ...args));
 env.set(new MalSymbol('*'), (...args) => operate('mul', ...args));
 env.set(new MalSymbol('/'), (...args) => operate('div', ...args));
-env.set(new MalSymbol('='), (...args) => operate('equals', ...args));
+env.set(new MalSymbol('='), (...args) => {
+  console.log(args);
+  return operate('equals', ...args);
+});
 env.set(new MalSymbol('>='), (...args) => operate('greaterEquals', ...args));
 env.set(new MalSymbol('<='), (...args) => operate('lesserEquals', ...args));
 env.set(new MalSymbol('>'), (...args) => operate('greaterThan', ...args));
@@ -208,9 +223,18 @@ env.set(new MalSymbol('<'), (...args) => operate('lesserThan', ...args));
 env.set(new MalSymbol('list'), (...args) => new MalList(args));
 env.set(new MalSymbol('list?'), (args) => new MalBool(args instanceof MalList));
 env.set(new MalSymbol('empty?'), (args) => new MalBool(args.value.length === 0));
-env.set(new MalSymbol('count'), (args) => new MalPrimitive(args.value.length));
+env.set(new MalSymbol('count'), (args) => {
+  if(args instanceof MalNil) return new MalPrimitive(0);
+  return new MalPrimitive(args.value.length);
+});
+
+env.set(new MalSymbol('not'), (args) => { 
+  if(args.value === 0) return new MalBool(false);
+  return new MalBool(!(EVAL(args, env).value));
+});
 
 env.set(new MalSymbol('prn'), (...args) => {
+  if(args.length === 0) console.log();
   args.forEach(arg => console.log(arg.value));
   return new MalNil();
 });
