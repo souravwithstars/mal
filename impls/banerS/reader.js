@@ -60,8 +60,8 @@ const read_atom = reader => {
     return new MalPrimitive(parseInt(token));
   }
 
-  if(token.match(/^"(?:\\.|[^\\"])*"$/)) {
-    return new MalString(token.slice(1,token.length-1));
+  if (token.match(/^"(?:\\.|[^\\"])*"$/)) {
+    return new MalString(token.slice(1, token.length - 1));
   }
 
   if (token === 'true') {

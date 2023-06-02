@@ -1,6 +1,6 @@
 const readline = require('readline');
 const { read_str } = require('./reader.js');
-const { MalSymbol, MalList, MalString, MalVector, MalMap, MalBool, MalPrimitive, MalNil } = require('./types.js');
+const { MalSymbol, MalList, MalString, MalVector, MalMap, MalBool, MalPrimitive, MalNil, MalFunction } = require('./types.js');
 const { Env } = require('./env.js');
 const { pr_str } = require('./printer.js');
 
@@ -25,9 +25,8 @@ const oneValueDivision = number => new MalPrimitive(`1/${number.value}`);
 const generalDivision = (firstNum, secondNum) =>
   new MalPrimitive(firstNum.value / secondNum.value);
 
-const oneValueEquals = value => new MalBool(true);
-const generalEquals = (firstValue, secondValue) =>
-  firstValue.value === secondValue.value;
+const oneValueEquals = _ => new MalBool(true);
+const generalEquals = (firstValue, secondValue) => firstValue.value === secondValue.value;
 
 const generalGreaterEquals = (firstValue, secondValue) =>
   firstValue.value >= secondValue.value;
@@ -43,7 +42,9 @@ const generalLesserThan = (firstValue, secondValue) =>
 
 const equalityCheck = (genFn, ...args) => {
   for (let i = 0; i < args.length - 1; i++) {
-    if (!genFn(...args.slice(i, i + 2))) return false;
+    if (!genFn(...args.slice(i, i + 2))) {
+      return false;
+    }
   }
   return true;
 };
@@ -71,7 +72,9 @@ const operate = (operation, initialNumber, ...args) => {
   };
   if (args.length === 0) return oneValueFn(initialNumber);
 
-  if (equalityOp.includes(operation)) return new MalBool(equalityCheck(genFn, initialNumber, ...args));
+  if (equalityOp.includes(operation)) {
+    return new MalBool(equalityCheck(genFn, initialNumber, ...args));
+  };
 
   return args.reduce(genFn, initialNumber);
 };
@@ -113,95 +116,78 @@ const handle_def = (ast, env) => {
 };
 
 const handle_let = (ast, env) => {
-  const newEnv = new Env(env);
+  const [bindings, ...forms] = ast.value.slice(1);
+
+  const newEnv = new Env(env, bindings, forms);
   for (let i = 0; i < ast.value[1].value.length; i += 2) {
     newEnv.set(ast.value[1].value[i], EVAL(ast.value[1].value[i + 1], newEnv));
   }
-  return EVAL(ast.value[2], newEnv);
+
+  const doForms = new MalList([new MalSymbol('do'), ...forms]);
+  return [doForms, newEnv];
 };
 
 const handle_do = (ast, env) => {
-  const evaluatedValues = ast.value.slice(1)
-    .map(operation => EVAL(operation, env));
-  return evaluatedValues[evaluatedValues.length - 1];
+  const forms = ast.value.slice(1);
+  let result = new MalNil();
+  forms.slice(0, -1).forEach(form => {
+    result = EVAL(form, env);
+  })
+  return forms[forms.length - 1];
 };
 
 const handle_if = (ast, env) => {
   const [_, condition, ifPart, elsePart] = ast.value;
-  const elsePartValue = elsePart ? EVAL(elsePart, env) : new MalNil();
-  const evaluatedValue = EVAL(condition, env);
-  let result;
 
-  if (evaluatedValue instanceof MalNil || evaluatedValue instanceof MalBool) {
-    result = new MalBool(evaluatedValue.value);
-  } else {
-    result = new MalBool(true);
+  const result = EVAL(condition, env);
+
+  if (result.value === false || result instanceof MalNil) {
+    return elsePart === undefined ? new MalNil() : elsePart;
   }
 
-  return result.value ? EVAL(ifPart, env) : elsePartValue;
-};
-
-const isCapturingPresent = list => {
-  return list.some(element => element.value === '&');
-};
-
-const getIndexOfCapture = list => {
-  for (let i = 0; i < list.length; i++) {
-    if (list[i].value === '&') return i;
-  }
+  return ifPart;
 };
 
 const handle_fn = (ast, env) => {
-  const [_, bindings, fnbody] = ast.value;
-
-  const clojure = (...args) => {
-    const newEnv = new Env(env);
-    if (isCapturingPresent(bindings.value)) {
-      const capturingIndex = getIndexOfCapture(bindings.value);
-      const bindingElements = bindings.value.slice(0, capturingIndex);
-      const restElements = bindings.value.slice(capturingIndex);
-
-      bindingElements.forEach(
-        (symbol, index) => newEnv.set(symbol, EVAL(args[index], newEnv)));
-      newEnv.set(restElements[1],
-        new MalList(EVAL(args.slice(capturingIndex), newEnv)));
-
-      return EVAL(fnbody, newEnv);
-    }
-
-    if (bindings.value.length !== args.length)
-      throw `Wrong number of args (${args.length}) passed to Function`;
-
-    bindings.value.forEach((symbol, index) => newEnv.set(symbol, args[index]));
-    return EVAL(fnbody, newEnv);
-  };
-
-  clojure.toString = () => '#<function>';
-
-  return clojure;
+  const [bindings, ...fnbody] = ast.value.slice(1);
+  const doForms = new MalList([new MalSymbol('do'), ...fnbody]);
+  return new MalFunction(doForms, bindings, env);
 };
 
 const READ = str => read_str(str);
 const EVAL = (ast, env) => {
-  if (!(ast instanceof MalList)) return eval_ast(ast, env);
+  while (true) {
+    if (!(ast instanceof MalList)) return eval_ast(ast, env);
 
-  if (ast.isEmpty()) return ast;
+    if (ast.isEmpty()) return ast;
 
-  switch (ast.value[0].value) {
-    case 'def!':
-      return handle_def(ast, env);
-    case 'let*':
-      return handle_let(ast, env);
-    case 'do':
-      return handle_do(ast, env);
-    case 'if':
-      return handle_if(ast, env);
-    case 'fn*':
-      return handle_fn(ast, env);
+    switch (ast.value[0].value) {
+      case 'def!':
+        return handle_def(ast, env);
+      case 'let*':
+        [ast, env] = handle_let(ast, env);
+        break;
+      case 'do':
+        ast = handle_do(ast, env);
+        break;
+      case 'if':
+        ast = handle_if(ast, env);
+        break;
+      case 'fn*':
+        ast = handle_fn(ast, env);
+        break;
+      default:
+        const [fn, ...args] = eval_ast(ast, env).value;
+        if (fn instanceof MalFunction) {
+          const binds = fn.binds;
+          const oldEnv = fn.env;
+          ast = fn.value;
+          env = new Env(oldEnv, binds.value, args);
+        } else {
+          return fn.apply(null, args);
+        }
+    }
   }
-  const [fn, ...args] = eval_ast(ast, env).value;
-
-  return fn.apply(null, args);
 };
 const PRINT = malValue => pr_str(malValue);
 
@@ -210,9 +196,7 @@ env.set(new MalSymbol('+'), (...args) => operate('add', ...args));
 env.set(new MalSymbol('-'), (...args) => operate('sub', ...args));
 env.set(new MalSymbol('*'), (...args) => operate('mul', ...args));
 env.set(new MalSymbol('/'), (...args) => operate('div', ...args));
-env.set(new MalSymbol('='), (...args) => {
-  return operate('equals', ...args);
-});
+env.set(new MalSymbol('='), (...args) => operate('equals', ...args));
 env.set(new MalSymbol('>='), (...args) => operate('greaterEquals', ...args));
 env.set(new MalSymbol('<='), (...args) => operate('lesserEquals', ...args));
 env.set(new MalSymbol('>'), (...args) => operate('greaterThan', ...args));
