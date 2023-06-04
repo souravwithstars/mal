@@ -1,5 +1,5 @@
-const { MalList, MalBool, MalPrimitive, MalNil } = require('./types.js');
-const { operate } = require('./utility.js');
+const { MalList, MalBool, MalPrimitive, MalNil, MalString, MalValue } = require('./types.js');
+const { operate, concatStrings } = require('./utility.js');
 
 const core = {
   '+': (...args) => operate('add', ...args),
@@ -19,10 +19,29 @@ const core = {
     return new MalPrimitive(args.value.length);
   },
   'prn': (...args) => {
-    if (args.length === 0) console.log();
-    args.forEach(arg => console.log(arg.value));
+    if (args.length === 0) {
+      console.log();
+    } else {
+      console.log(concatStrings(args, " ", false, true));
+    }
     return new MalNil();
-  }
+  },
+  'pr-str': (...args) => {
+    const result = concatStrings(args, " ", false, true);
+    return new MalString(result);
+  },
+  'str': (...args) => {
+    const result = concatStrings(args, "", true);
+    return new MalValue(result);
+  },
+  'println': (...args) => {
+    if (args.length === 0) {
+      console.log();
+    } else {
+      console.log(concatStrings(args, " ", false, false));
+    }
+    return new MalNil();
+  },
 };
 
 module.exports = { core };

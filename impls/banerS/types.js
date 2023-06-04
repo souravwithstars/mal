@@ -126,7 +126,7 @@ class MalString extends MalValue {
   }
 
   pr_str() {
-    return this.value();
+    return `"${this.value.toString()}"`;
   }
 }
 
@@ -142,4 +142,4 @@ class MalFunction extends MalValue {
   }
 }
 
-module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive, MalString, MalFunction };
+module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive, MalString, MalFunction, MalIterable };

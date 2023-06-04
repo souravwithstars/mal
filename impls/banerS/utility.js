@@ -1,4 +1,4 @@
-const { MalBool, MalPrimitive } = require('./types.js');
+const { MalBool, MalPrimitive, MalIterable } = require('./types.js');
 
 const identityFn = number => new MalPrimitive(number.value);
 
@@ -70,4 +70,18 @@ const operate = (operation, initialNumber, ...args) => {
   return args.reduce(genFn, initialNumber);
 };
 
-module.exports = { operate };
+const concatStrings = (args, separator, wrapRequired = false, asString = false) => {
+  let result = "";
+  for (let i = 0; i < args.length; i++) {
+    let element;
+    if (args[i] instanceof MalIterable) {
+      element = `(${concatStrings(args[i].value, " ", false, true)})`;
+    } else {
+      element = asString ? args[i].pr_str() : args[i].value.toString();
+    }
+    result = result.concat(separator + element);
+  }
+  return wrapRequired ? `"${result.trim()}"` : result.trim();
+};
+
+module.exports = { operate, concatStrings };
