@@ -1,9 +1,9 @@
 const readline = require('readline');
 const { read_str } = require('./reader.js');
-const { MalSymbol, MalList, MalString, MalVector, MalMap, MalBool, MalPrimitive, MalNil, MalFunction } = require('./types.js');
+const { MalSymbol, MalList, MalString, MalVector, MalMap, MalNil, MalFunction } = require('./types.js');
 const { Env } = require('./env.js');
 const { pr_str } = require('./printer.js');
-const { operate } = require('./utility.js');
+const { core } = require('./core.js');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -123,33 +123,7 @@ const EVAL = (ast, env) => {
 const PRINT = malValue => pr_str(malValue);
 
 const env = new Env();
-env.set(new MalSymbol('+'), (...args) => operate('add', ...args));
-env.set(new MalSymbol('-'), (...args) => operate('sub', ...args));
-env.set(new MalSymbol('*'), (...args) => operate('mul', ...args));
-env.set(new MalSymbol('/'), (...args) => operate('div', ...args));
-env.set(new MalSymbol('='), (...args) => operate('equals', ...args));
-env.set(new MalSymbol('>='), (...args) => operate('greaterEquals', ...args));
-env.set(new MalSymbol('<='), (...args) => operate('lesserEquals', ...args));
-env.set(new MalSymbol('>'), (...args) => operate('greaterThan', ...args));
-env.set(new MalSymbol('<'), (...args) => operate('lesserThan', ...args));
-env.set(new MalSymbol('list'), (...args) => new MalList(args));
-env.set(new MalSymbol('list?'), (args) => new MalBool(args instanceof MalList));
-env.set(new MalSymbol('empty?'), (args) => new MalBool(args.value.length === 0));
-env.set(new MalSymbol('count'), (args) => {
-  if (args instanceof MalNil) return new MalPrimitive(0);
-  return new MalPrimitive(args.value.length);
-});
-
-env.set(new MalSymbol('not'), (args) => {
-  if (args.value === 0) return new MalBool(false);
-  return new MalBool(!(EVAL(args, env).value));
-});
-
-env.set(new MalSymbol('prn'), (...args) => {
-  if (args.length === 0) console.log();
-  args.forEach(arg => console.log(arg.value));
-  return new MalNil();
-});
+Object.entries(core).forEach(([key, value]) => env.set(new MalSymbol(key), value));
 
 const rep = str => PRINT(EVAL(READ(str), env));
 

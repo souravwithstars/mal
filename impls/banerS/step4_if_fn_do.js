@@ -3,78 +3,12 @@ const { read_str } = require('./reader.js');
 const { MalSymbol, MalList, MalString, MalVector, MalMap, MalBool, MalPrimitive, MalNil } = require('./types.js');
 const { Env } = require('./env.js');
 const { pr_str } = require('./printer.js');
+const { core } = require('./core.js');
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
-
-const identityFn = number => new MalPrimitive(number.value);
-
-const generalAddition = (firstNum, secondNum) =>
-  new MalPrimitive(firstNum.value + secondNum.value);
-
-const oneValueSubstraction = number => new MalPrimitive(0 - number.value);
-const generalSubstraction = (firstNum, secondNum) =>
-  new MalPrimitive(firstNum.value - secondNum.value);
-
-const generalMultiplication = (firstNum, secondNum) =>
-  new MalPrimitive(firstNum.value * secondNum.value);
-
-const oneValueDivision = number => new MalPrimitive(`1/${number.value}`);
-const generalDivision = (firstNum, secondNum) =>
-  new MalPrimitive(firstNum.value / secondNum.value);
-
-const oneValueEquals = value => new MalBool(true);
-const generalEquals = (firstValue, secondValue) =>
-  firstValue.value === secondValue.value;
-
-const generalGreaterEquals = (firstValue, secondValue) =>
-  firstValue.value >= secondValue.value;
-
-const generalLesserEquals = (firstValue, secondValue) =>
-  firstValue.value <= secondValue.value;
-
-const generalGreaterThan = (firstValue, secondValue) =>
-  firstValue.value > secondValue.value;
-
-const generalLesserThan = (firstValue, secondValue) =>
-  firstValue.value < secondValue.value;
-
-const equalityCheck = (genFn, ...args) => {
-  for (let i = 0; i < args.length - 1; i++) {
-    if (!genFn(...args.slice(i, i + 2))) return false;
-  }
-  return true;
-};
-
-const FNMAP = {
-  'add': { genFn: generalAddition, oneValueFn: identityFn },
-  'sub': { genFn: generalSubstraction, oneValueFn: oneValueSubstraction },
-  'mul': { genFn: generalMultiplication, oneValueFn: identityFn },
-  'div': { genFn: generalDivision, oneValueFn: oneValueDivision },
-  'equals': { genFn: generalEquals, oneValueFn: oneValueEquals },
-  'greaterEquals': { genFn: generalGreaterEquals, oneValueFn: oneValueEquals },
-  'lesserEquals': { genFn: generalLesserEquals, oneValueFn: oneValueEquals },
-  'greaterThan': { genFn: generalGreaterThan, oneValueFn: oneValueEquals },
-  'lesserThan': { genFn: generalLesserThan, oneValueFn: oneValueEquals }
-};
-
-const operate = (operation, initialNumber, ...args) => {
-  const { genFn, oneValueFn } = FNMAP[operation];
-  const equalityOp = ['equals', 'greaterEquals', 'lesserEquals', 'greaterThan', 'lesserThan'];
-  if (initialNumber === undefined) {
-    if (operation === 'add') return oneValueFn(new MalPrimitive(0))
-    if (operation === 'mul') return oneValueFn(new MalPrimitive(1));
-
-    throw 'Wrong Number of args [0]';
-  };
-  if (args.length === 0) return oneValueFn(initialNumber);
-
-  if (equalityOp.includes(operation)) return new MalBool(equalityCheck(genFn, initialNumber, ...args));
-
-  return args.reduce(genFn, initialNumber);
-};
 
 const eval_ast = (ast, env) => {
   if (ast instanceof MalSymbol) {
@@ -206,35 +140,7 @@ const EVAL = (ast, env) => {
 const PRINT = malValue => pr_str(malValue);
 
 const env = new Env();
-env.set(new MalSymbol('+'), (...args) => operate('add', ...args));
-env.set(new MalSymbol('-'), (...args) => operate('sub', ...args));
-env.set(new MalSymbol('*'), (...args) => operate('mul', ...args));
-env.set(new MalSymbol('/'), (...args) => operate('div', ...args));
-env.set(new MalSymbol('='), (...args) => {
-  return operate('equals', ...args);
-});
-env.set(new MalSymbol('>='), (...args) => operate('greaterEquals', ...args));
-env.set(new MalSymbol('<='), (...args) => operate('lesserEquals', ...args));
-env.set(new MalSymbol('>'), (...args) => operate('greaterThan', ...args));
-env.set(new MalSymbol('<'), (...args) => operate('lesserThan', ...args));
-env.set(new MalSymbol('list'), (...args) => new MalList(args));
-env.set(new MalSymbol('list?'), (args) => new MalBool(args instanceof MalList));
-env.set(new MalSymbol('empty?'), (args) => new MalBool(args.value.length === 0));
-env.set(new MalSymbol('count'), (args) => {
-  if (args instanceof MalNil) return new MalPrimitive(0);
-  return new MalPrimitive(args.value.length);
-});
-
-env.set(new MalSymbol('not'), (args) => {
-  if (args.value === 0) return new MalBool(false);
-  return new MalBool(!(EVAL(args, env).value));
-});
-
-env.set(new MalSymbol('prn'), (...args) => {
-  if (args.length === 0) console.log();
-  args.forEach(arg => console.log(arg.value));
-  return new MalNil();
-});
+Object.entries(core).forEach(([key, value]) => env.set(new MalSymbol(key), value));
 
 const rep = str => PRINT(EVAL(READ(str), env));
 
