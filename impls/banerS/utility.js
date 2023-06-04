@@ -12,12 +12,12 @@ const generalSubstraction = (firstNum, secondNum) =>
 const generalMultiplication = (firstNum, secondNum) =>
   new MalPrimitive(firstNum.value * secondNum.value);
 
-const oneValueDivision = number => new MalPrimitive(`1/${number.value}`);
+const oneValueDivision = number => new MalPrimitive(1 / number.value);
 const generalDivision = (firstNum, secondNum) =>
   new MalPrimitive(firstNum.value / secondNum.value);
 
 const oneValueEquals = _ => new MalBool(true);
-const generalEquals = (firstValue, secondValue) => firstValue.value === secondValue.value;
+const generalEquals = (firstValue, secondValue) => firstValue.isEqual(secondValue);
 
 const generalGreaterEquals = (firstValue, secondValue) =>
   firstValue.value >= secondValue.value;

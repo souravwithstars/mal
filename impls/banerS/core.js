@@ -18,10 +18,6 @@ const core = {
     if (args instanceof MalNil) return new MalPrimitive(0);
     return new MalPrimitive(args.value.length);
   },
-  'not': (args) => {
-    if (args.value === 0) return new MalBool(false);
-    return new MalBool(!(EVAL(args, env).value));
-  },
   'prn': (...args) => {
     if (args.length === 0) console.log();
     args.forEach(arg => console.log(arg.value));

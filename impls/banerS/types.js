@@ -6,15 +6,42 @@ class MalValue {
   pr_str() {
     return this.value.toString();
   }
+
+  isEqual(otherValue) {
+    if (!(otherValue instanceof MalValue)) return false;
+    return otherValue.value === this.value;
+  }
 }
 
 class MalSymbol extends MalValue {
   constructor(value) {
     super(value);
   }
+
+  isEqual(otherValue) {
+    if (!(otherValue instanceof MalSymbol)) return false;
+    return otherValue.value === this.value;
+  }
 }
 
-class MalList extends MalValue {
+class MalIterable extends MalValue {
+  constructor(value) {
+    super(value);
+  }
+
+  isEqual(otherValue) {
+    if (!(otherValue instanceof MalIterable)) return false;
+    if (otherValue.value.length !== this.value.length) return false;
+
+    for (let index = 0; index < this.value.length; index++) {
+      if (!this.value[index].isEqual(otherValue.value[index])) return false;
+    }
+
+    return true;
+  }
+}
+
+class MalList extends MalIterable {
   constructor(value) {
     super(value);
   }
@@ -28,7 +55,7 @@ class MalList extends MalValue {
   }
 }
 
-class MalVector extends MalValue {
+class MalVector extends MalIterable {
   constructor(value) {
     super(value);
   }
@@ -38,7 +65,7 @@ class MalVector extends MalValue {
   }
 }
 
-class MalMap extends MalValue {
+class MalMap extends MalIterable {
   constructor(value) {
     super(value);
   }
@@ -57,11 +84,20 @@ class MalPrimitive extends MalValue {
   constructor(value) {
     super(value);
   }
+
+  isEqual(otherValue) {
+    if (!(otherValue instanceof MalPrimitive)) return false;
+    return otherValue.value === this.value;
+  }
 }
 
 class MalNil extends MalPrimitive {
   constructor(value) {
     super(null);
+  }
+
+  isEqual(otherValue) {
+    return otherValue instanceof MalNil;
   }
 
   pr_str() {
@@ -76,6 +112,11 @@ class MalBool extends MalPrimitive {
 
   pr_str() {
     return this.value.toString();
+  }
+
+  isEqual(otherValue) {
+    if (!(otherValue instanceof MalBool)) return false;
+    return otherValue.value === this.value;
   }
 }
 
@@ -97,10 +138,6 @@ class MalFunction extends MalValue {
   }
 
   pr_str() {
-    return '#<Function>';
-  }
-
-  toString() {
     return '#<Function>';
   }
 }

@@ -1,6 +1,6 @@
 const readline = require('readline');
 const { read_str } = require('./reader.js');
-const { MalSymbol, MalList, MalString, MalVector, MalMap, MalBool, MalPrimitive, MalNil } = require('./types.js');
+const { MalSymbol, MalList, MalString, MalVector, MalMap, MalBool, MalNil } = require('./types.js');
 const { Env } = require('./env.js');
 const { pr_str } = require('./printer.js');
 const { core } = require('./core.js');
@@ -141,6 +141,10 @@ const PRINT = malValue => pr_str(malValue);
 
 const env = new Env();
 Object.entries(core).forEach(([key, value]) => env.set(new MalSymbol(key), value));
+env.set(new MalSymbol('not'), (args) => {
+  if (args.value === 0) return new MalBool(false);
+  return new MalBool(!(EVAL(args, env).value));
+});
 
 const rep = str => PRINT(EVAL(READ(str), env));
 
