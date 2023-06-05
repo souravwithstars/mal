@@ -75,7 +75,7 @@ const concatStrings = (args, separator, wrapRequired = false, asString = false) 
   for (let i = 0; i < args.length; i++) {
     let element;
     if (args[i] instanceof MalIterable) {
-      element = `(${concatStrings(args[i].value, " ", false, true)})`;
+      element = concatStrings(args[i].value, " ", false, true);
     } else {
       element = asString ? args[i].pr_str() : args[i].value.toString();
     }

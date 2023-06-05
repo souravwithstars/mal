@@ -130,6 +130,17 @@ class MalString extends MalValue {
   }
 }
 
+class MalKeyword extends MalValue {
+  constructor(value) {
+    super(value);
+  }
+
+  isEqual(otherValue) {
+    if (!(otherValue instanceof MalKeyword)) return false;
+    return otherValue.value === this.value;
+  }
+}
+
 class MalFunction extends MalValue {
   constructor(ast, binds, env) {
     super(ast);
@@ -142,4 +153,4 @@ class MalFunction extends MalValue {
   }
 }
 
-module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive, MalString, MalFunction, MalIterable };
+module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive, MalString, MalFunction, MalIterable, MalKeyword };
