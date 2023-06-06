@@ -1,3 +1,9 @@
+const pr_str = (malValue, print_readably = false) => {
+  if (malValue instanceof MalValue) return malValue.pr_str(print_readably);
+  if (malValue instanceof MalFunction) return '#<function>';
+  return malValue.toString();
+};
+
 class MalValue {
   constructor(value) {
     this.value = value;
@@ -47,7 +53,7 @@ class MalList extends MalIterable {
   }
 
   pr_str() {
-    return '(' + this.value.map(x => x.pr_str()).join(' ') + ')';
+    return '(' + this.value.map(x => pr_str(x)).join(' ') + ')';
   }
 
   isEmpty() {
@@ -61,7 +67,7 @@ class MalVector extends MalIterable {
   }
 
   pr_str() {
-    return '[' + this.value.map(x => x.pr_str()).join(' ') + ']';
+    return '[' + this.value.map(x => pr_str(x)).join(' ') + ']';
   }
 }
 
@@ -125,8 +131,14 @@ class MalString extends MalValue {
     super(value);
   }
 
-  pr_str() {
-    return `"${this.value.toString()}"`;
+  pr_str(print_readably = false) {
+    if (print_readably) {
+      return '"' + this.value
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n') + '"';
+    }
+    return this.value;
   }
 }
 
@@ -142,15 +154,44 @@ class MalKeyword extends MalValue {
 }
 
 class MalFunction extends MalValue {
-  constructor(ast, binds, env) {
+  constructor(ast, binds, env, fn) {
     super(ast);
     this.binds = binds;
     this.env = env;
+    this.fn = fn;
   }
 
   pr_str() {
     return '#<Function>';
   }
+
+  apply(ctx, ...args) {
+    return this.fn.apply(ctx, args);
+  }
 }
 
-module.exports = { MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive, MalString, MalFunction, MalIterable, MalKeyword };
+class MalAtom extends MalValue {
+  constructor(value) {
+    super(value);
+  }
+
+  pr_str(print_readably = false) {
+    return `(atom ${pr_str(this.value, print_readably)})`;
+  }
+
+  deref() {
+    return this.value;
+  };
+
+  reset(value) {
+    this.value = value;
+    return this.value;
+  }
+
+  swap(fn, args) {
+    this.value = fn.apply(null, [this.value, ...args]);
+    return this.value;
+  }
+}
+
+module.exports = { MalAtom, MalList, MalSymbol, MalValue, MalVector, MalNil, MalBool, MalMap, MalPrimitive, MalString, MalFunction, MalIterable, MalKeyword, pr_str };

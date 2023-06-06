@@ -1,5 +1,7 @@
-const { MalList, MalBool, MalPrimitive, MalNil, MalString, MalValue } = require('./types.js');
+const { MalAtom, MalList, MalBool, MalPrimitive, MalNil, MalString, MalValue } = require('./types.js');
 const { operate, concatStrings } = require('./utility.js');
+const { read_str } = require('./reader.js');
+const fs = require('fs');
 
 const core = {
   '+': (...args) => operate('add', ...args),
@@ -42,6 +44,13 @@ const core = {
     }
     return new MalNil();
   },
+  'read-string': (string) => read_str(string.value),
+  'slurp': (filename) => new MalString(fs.readFileSync(filename.value, 'utf8')),
+  'atom': (value) => new MalAtom(value),
+  'atom?': (value) => value instanceof MalAtom,
+  'deref': (atom) => atom.deref(),
+  'reset!': (atom, value) => atom.reset(value),
+  'swap!': (atom, fn, ...args) => atom.swap(fn, args),
 };
 
 module.exports = { core };

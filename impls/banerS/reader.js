@@ -21,7 +21,7 @@ class Reader {
 const tokenize = str => {
   const re = /[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)/g;
 
-  return [...str.matchAll(re)].map(x => x[1]).slice(0, -1);
+  return [...str.matchAll(re)].map(x => x[1]).slice(0, -1).filter(y => !y.startsWith(';'));
 };
 
 const read_seq = (reader, closingSymbol) => {
@@ -53,6 +53,13 @@ const read_map = reader => {
   return new MalMap(ast);
 };
 
+const createMalString = (str) => {
+  const value = str.replace(/\\(.)/g, (x, captured) => {
+    return captured === 'n' ? '\n' : captured;
+  });
+  return new MalString(value);
+};
+
 const read_atom = reader => {
   const token = reader.next();
 
@@ -61,7 +68,7 @@ const read_atom = reader => {
   }
 
   if (token.match(/^"(?:\\.|[^\\"])*"$/)) {
-    return new MalString(token.slice(1, token.length - 1));
+    return createMalString(token.slice(1, token.length - 1));
   }
 
   if (token[0] === ':') {
@@ -83,15 +90,27 @@ const read_atom = reader => {
   return new MalSymbol(token);
 };
 
+const prependSymbol = (reader, symbolStr) => {
+  reader.next();
+  const symbol = new MalSymbol(symbolStr);
+  const newAst = read_form(reader);
+  return new MalList([symbol, newAst]);
+};
+
 const read_form = reader => {
   const token = reader.peek();
-  switch (token) {
+  switch (token[0]) {
     case '(':
       return read_list(reader);
     case '[':
       return read_vector(reader);
     case '{':
       return read_map(reader);
+    case ';':
+      reader.next();
+      return new MalNil();
+    case '@':
+      return prependSymbol(reader, 'deref');
     default:
       return read_atom(reader);
   }
@@ -103,4 +122,4 @@ const read_str = str => {
   return read_form(reader);
 };
 
-module.exports = { read_str };
+module.exports = { read_str, createMalString };
