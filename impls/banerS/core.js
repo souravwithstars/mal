@@ -55,6 +55,9 @@ const core = {
   'concat': (...lists) => new MalList(lists.flatMap(x => x.value)),
   'vec': (list) => new MalVector(list.value.slice()),
   'map': (list) => new MalMap(list.value.slice()),
+  'nth': (list, n) => list.nth(n),
+  'first': (list) => list instanceof MalNil ? new MalNil() : list.first(),
+  'rest': (list) => list instanceof MalNil ? new MalList([]) : new MalList(list.rest()),
 };
 
 module.exports = { core };

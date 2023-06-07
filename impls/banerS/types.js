@@ -45,6 +45,25 @@ class MalIterable extends MalValue {
 
     return true;
   }
+
+  isEmpty() {
+    return this.value.length === 0;
+  }
+
+  nth(n) {
+    if (n.value >= this.value.length) throw 'index out of range';
+    return this.value[n.value];
+  }
+
+  first() {
+    if (this.isEmpty()) return new MalNil();
+    return this.value[0];
+  }
+
+  rest() {
+    if (this.value.length === 0) return this.value;
+    return this.value.slice(1);
+  }
 }
 
 class MalList extends MalIterable {
@@ -54,10 +73,6 @@ class MalList extends MalIterable {
 
   pr_str(print_readably) {
     return '(' + this.value.map(x => pr_str(x, print_readably)).join(' ') + ')';
-  }
-
-  isEmpty() {
-    return this.value.length === 0;
   }
 
   beginsWith(symbol) {
@@ -163,11 +178,12 @@ class MalKeyword extends MalValue {
 }
 
 class MalFunction extends MalValue {
-  constructor(ast, binds, env, fn) {
+  constructor(ast, binds, env, fn, isMacro = false) {
     super(ast);
     this.binds = binds;
     this.env = env;
     this.fn = fn;
+    this.isMacro = isMacro;
   }
 
   pr_str() {
