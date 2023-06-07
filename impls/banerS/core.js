@@ -1,4 +1,4 @@
-const { MalAtom, MalList, MalBool, MalPrimitive, MalNil, MalString, MalValue } = require('./types.js');
+const { MalAtom, MalList, MalBool, MalPrimitive, MalNil, MalString, MalValue, MalVector, MalMap } = require('./types.js');
 const { operate, concatStrings } = require('./utility.js');
 const { read_str } = require('./reader.js');
 const fs = require('fs');
@@ -33,8 +33,8 @@ const core = {
     return new MalString(result);
   },
   'str': (...args) => {
-    const result = concatStrings(args, "", true);
-    return new MalValue(result);
+    const result = concatStrings(args, "");
+    return new MalString(result);
   },
   'println': (...args) => {
     if (args.length === 0) {
@@ -44,13 +44,17 @@ const core = {
     }
     return new MalNil();
   },
-  'read-string': (string) => read_str(string.value),
+  'read-string': (string) => string ? read_str(string.value) : new MalNil(),
   'slurp': (filename) => new MalString(fs.readFileSync(filename.value, 'utf8')),
   'atom': (value) => new MalAtom(value),
   'atom?': (value) => value instanceof MalAtom,
   'deref': (atom) => atom.deref(),
   'reset!': (atom, value) => atom.reset(value),
   'swap!': (atom, fn, ...args) => atom.swap(fn, args),
+  'cons': (value, list) => new MalList([value, ...list.value]),
+  'concat': (...lists) => new MalList(lists.flatMap(x => x.value)),
+  'vec': (list) => new MalVector(list.value.slice()),
+  'map': (list) => new MalMap(list.value.slice()),
 };
 
 module.exports = { core };

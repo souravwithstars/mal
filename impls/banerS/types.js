@@ -52,12 +52,16 @@ class MalList extends MalIterable {
     super(value);
   }
 
-  pr_str() {
-    return '(' + this.value.map(x => pr_str(x)).join(' ') + ')';
+  pr_str(print_readably) {
+    return '(' + this.value.map(x => pr_str(x, print_readably)).join(' ') + ')';
   }
 
   isEmpty() {
     return this.value.length === 0;
+  }
+
+  beginsWith(symbol) {
+    return this.value.length > 0 && this.value[0].value === symbol;
   }
 }
 
@@ -66,8 +70,8 @@ class MalVector extends MalIterable {
     super(value);
   }
 
-  pr_str() {
-    return '[' + this.value.map(x => pr_str(x)).join(' ') + ']';
+  pr_str(print_readably) {
+    return '[' + this.value.map(x => pr_str(x, print_readably)).join(' ') + ']';
   }
 }
 
@@ -76,12 +80,12 @@ class MalMap extends MalIterable {
     super(value);
   }
 
-  pr_str() {
+  pr_str(print_readably) {
     return '{' + this.value.map((x, i) => {
       if ((i % 2 !== 0) && (i !== this.value.length - 1)) {
-        return x.pr_str() + ',';
+        return pr_str(x, print_readably) + ',';
       }
-      return x.pr_str();
+      return pr_str(x, true);
     }).join(' ') + '}';
   }
 }
@@ -140,6 +144,11 @@ class MalString extends MalValue {
     }
     return this.value;
   }
+
+  isEqual(otherValue) {
+    if (!(otherValue instanceof MalString)) return false;
+    return otherValue.value === this.value;
+  }
 }
 
 class MalKeyword extends MalValue {
@@ -165,7 +174,7 @@ class MalFunction extends MalValue {
     return '#<Function>';
   }
 
-  apply(ctx, ...args) {
+  apply(ctx, args) {
     return this.fn.apply(ctx, args);
   }
 }

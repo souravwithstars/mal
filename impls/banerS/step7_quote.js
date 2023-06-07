@@ -1,9 +1,19 @@
 const readline = require('readline');
-const { MalSymbol, MalList, MalString, MalVector, MalMap, MalNil, MalFunction, MalBool } = require('./types.js');
 const { Env } = require('./env.js');
 const { core } = require('./core.js');
 const { pr_str } = require('./printer.js');
 const { read_str } = require('./reader.js');
+const {
+  MalSymbol,
+  MalList,
+  MalString,
+  MalVector,
+  MalMap,
+  MalNil,
+  MalFunction,
+  MalBool,
+  MalIterable
+} = require('./types.js');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -49,9 +59,9 @@ const handle_def = (ast, env) => {
 const handle_let = (ast, env) => {
   const [bindings, ...forms] = ast.value.slice(1);
 
-  const newEnv = new Env(env, bindings, forms);
-  for (let i = 0; i < ast.value[1].value.length; i += 2) {
-    newEnv.set(ast.value[1].value[i], EVAL(ast.value[1].value[i + 1], newEnv));
+  const newEnv = new Env(env, bindings.value, forms);
+  for (let i = 0; i < bindings.value.length; i += 2) {
+    newEnv.set(bindings.value[i], EVAL(bindings.value[i + 1], newEnv));
   }
 
   const doForms = new MalList([new MalSymbol('do'), ...forms]);
@@ -108,6 +118,13 @@ const EVAL = (ast, env) => {
       case 'if':
         ast = handle_if(ast, env);
         break;
+      case 'quote':
+        return ast.value[1];
+      case 'quasiquoteexpand':
+        return quasiquote(ast.value[1]);
+      case 'quasiquote':
+        ast = quasiquote(ast.value[1]);
+        break;
       case 'fn*':
         ast = handle_fn(ast, env);
         break;
@@ -124,6 +141,31 @@ const EVAL = (ast, env) => {
     }
   }
 };
+
+const quasiquote = (ast) => {
+  if (ast instanceof MalList && ast.beginsWith('unquote')) return ast.value[1];
+
+  if (ast instanceof MalSymbol || ast instanceof MalMap) return new MalList([new MalSymbol('quote'), ast]);
+
+  if (ast instanceof MalIterable) {
+    let result = new MalList([]);
+    for (let i = ast.value.length - 1; i >= 0; i--) {
+      const element = ast.value[i];
+      if (element instanceof MalList && element.beginsWith('splice-unquote')) {
+        result = new MalList([new MalSymbol('concat'), element.value[1], result]);
+      } else {
+        result = new MalList([new MalSymbol('cons'), quasiquote(element), result]);
+      }
+    }
+    if (ast instanceof MalVector) return new MalList([new MalSymbol('vec'), result]);
+    if (ast instanceof MalMap) return new MalList([new MalSymbol('map'), result]);
+
+    return result;
+  }
+
+  return ast;
+};
+
 const PRINT = malValue => pr_str(malValue, true);
 
 const env = new Env();

@@ -99,7 +99,7 @@ const prependSymbol = (reader, symbolStr) => {
 
 const read_form = reader => {
   const token = reader.peek();
-  switch (token[0]) {
+  switch (token) {
     case '(':
       return read_list(reader);
     case '[':
@@ -111,6 +111,14 @@ const read_form = reader => {
       return new MalNil();
     case '@':
       return prependSymbol(reader, 'deref');
+    case "'":
+      return prependSymbol(reader, 'quote');
+    case '`':
+      return prependSymbol(reader, 'quasiquote');
+    case '~':
+      return prependSymbol(reader, 'unquote');
+    case '~@':
+      return prependSymbol(reader, 'splice-unquote');
     default:
       return read_atom(reader);
   }
